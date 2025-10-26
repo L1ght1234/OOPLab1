@@ -44,6 +44,12 @@
                         IsToggled="False" 
                         Toggled="OnShowFormulaToggled"/>
             </HorizontalStackLayout>
+
+            <Button x:Name="HelpButton" 
+                    Text="Довідка" 
+                    Clicked="OnHelpClicked"
+                    BackgroundColor="#FF9800"
+                    TextColor="White"/>
         </StackLayout>
 
         <ScrollView Grid.Row="2" 

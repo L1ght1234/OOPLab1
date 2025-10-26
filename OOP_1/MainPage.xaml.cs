@@ -169,6 +169,8 @@ namespace OOP_1
             BuildGrid();
         }
 
+        // ==================== НОВІ МЕТОДИ ДЛЯ GOOGLE DRIVE ====================
+
         private async void OnConnectToGoogleDriveClicked(object sender, EventArgs e)
         {
             try
@@ -281,6 +283,7 @@ namespace OOP_1
                     return;
                 }
 
+                // Показуємо список файлів для вибору
                 var fileNames = files.Select(f =>
                     $"{f.Name} ({f.ModifiedTime?.ToString("dd.MM.yyyy HH:mm") ?? "?"})").ToArray();
 
@@ -301,14 +304,17 @@ namespace OOP_1
 
                 var spreadsheetData = await _googleDriveService.LoadSpreadsheetAsync(selectedFile.Id);
 
+                // Очищуємо поточну таблицю
                 _spreadsheet.Cells.Clear();
 
+                // Завантажуємо дані
                 foreach (var kvp in spreadsheetData.Cells)
                 {
                     var address = CellAddress.FromString(kvp.Key);
                     _spreadsheet.SetCellExpression(address.Row, address.Column, kvp.Value);
                 }
 
+                // Оновлюємо розміри таблиці
                 while (_spreadsheet.RowCount < spreadsheetData.RowCount)
                     _spreadsheet.AddRow();
 
@@ -332,6 +338,13 @@ namespace OOP_1
                     $"Не вдалося завантажити файл: {ex.Message}",
                     "ОК");
             }
+        }
+
+        private async void OnHelpClicked(object sender, EventArgs e)
+        {
+            await DisplayAlert("Про програму",
+                "Лабораторна робота 1\nВаріант 28\n\nВиконав: Сидоренко Артем\nГрупа: К-24",
+                "ОК");
         }
     }
 }
