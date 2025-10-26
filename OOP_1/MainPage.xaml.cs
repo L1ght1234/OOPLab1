@@ -1,4 +1,5 @@
 ﻿using OOP_1.Models;
+using OOP_1.Services;
 using Cell = OOP_1.Models.Cell;
 
 namespace OOP_1
@@ -8,6 +9,8 @@ namespace OOP_1
         private readonly Spreadsheet _spreadsheet;
         private Cell _selectedCell;
         private CellAddress _selectedCellAddress;
+        private readonly GoogleDriveService _googleDriveService;
+        private bool _isConnectedToGoogleDrive = false;
 
         public MainPage()
         {
@@ -17,6 +20,8 @@ namespace OOP_1
             _selectedCellAddress = new CellAddress(0, 0);
             _selectedCell = _spreadsheet.GetCell(_selectedCellAddress);
             SelectedCellLabel.Text = _selectedCellAddress.ToString();
+
+            _googleDriveService = new GoogleDriveService();
 
             BuildGrid();
         }
@@ -162,6 +167,171 @@ namespace OOP_1
         private void OnShowFormulaToggled(object sender, ToggledEventArgs e)
         {
             BuildGrid();
+        }
+
+        private async void OnConnectToGoogleDriveClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                ConnectButton.IsEnabled = false;
+                ConnectButton.Text = "Підключення...";
+
+                bool authenticated = await _googleDriveService.AuthenticateAsync();
+
+                if (authenticated)
+                {
+                    _isConnectedToGoogleDrive = true;
+                    SaveButton.IsEnabled = true;
+                    LoadButton.IsEnabled = true;
+                    ConnectButton.Text = "Підключено ✓";
+                    ConnectButton.BackgroundColor = Colors.Green;
+
+                    await DisplayAlert("Успіх",
+                        "Успішно підключено до Google Drive!",
+                        "ОК");
+                }
+                else
+                {
+                    ConnectButton.IsEnabled = true;
+                    ConnectButton.Text = "Підключити Google Drive";
+                    await DisplayAlert("Помилка",
+                        "Не вдалося підключитися до Google Drive",
+                        "ОК");
+                }
+            }
+            catch (Exception ex)
+            {
+                ConnectButton.IsEnabled = true;
+                ConnectButton.Text = "Підключити Google Drive";
+                await DisplayAlert("Помилка",
+                    $"Помилка підключення: {ex.Message}",
+                    "ОК");
+            }
+        }
+
+        private async void OnSaveClicked(object sender, EventArgs e)
+        {
+            if (!_isConnectedToGoogleDrive)
+            {
+                await DisplayAlert("Помилка",
+                    "Спочатку підключіться до Google Drive",
+                    "ОК");
+                return;
+            }
+
+            try
+            {
+                string fileName = await DisplayPromptAsync("Зберегти файл",
+                    "Введіть ім'я файлу:",
+                    "Зберегти",
+                    "Скасувати",
+                    placeholder: "Моя таблиця",
+                    initialValue: "Spreadsheet");
+
+                if (string.IsNullOrWhiteSpace(fileName))
+                    return;
+
+                SaveButton.IsEnabled = false;
+                SaveButton.Text = "Збереження...";
+
+                string fileId = await _googleDriveService.SaveSpreadsheetAsync(_spreadsheet, fileName);
+
+                SaveButton.IsEnabled = true;
+                SaveButton.Text = "Зберегти";
+
+                await DisplayAlert("Успіх",
+                    $"Таблиця '{fileName}' успішно збережена на Google Drive!\nID файлу: {fileId}",
+                    "ОК");
+            }
+            catch (Exception ex)
+            {
+                SaveButton.IsEnabled = true;
+                SaveButton.Text = "Зберегти";
+                await DisplayAlert("Помилка",
+                    $"Не вдалося зберегти файл: {ex.Message}",
+                    "ОК");
+            }
+        }
+
+        private async void OnLoadClicked(object sender, EventArgs e)
+        {
+            if (!_isConnectedToGoogleDrive)
+            {
+                await DisplayAlert("Помилка",
+                    "Спочатку підключіться до Google Drive",
+                    "ОК");
+                return;
+            }
+
+            try
+            {
+                LoadButton.IsEnabled = false;
+                LoadButton.Text = "Завантаження списку...";
+
+                var files = await _googleDriveService.ListSpreadsheetFilesAsync();
+
+                LoadButton.IsEnabled = true;
+                LoadButton.Text = "Завантажити";
+
+                if (files.Count == 0)
+                {
+                    await DisplayAlert("Інформація",
+                        "На Google Drive не знайдено файлів з таблицями",
+                        "ОК");
+                    return;
+                }
+
+                var fileNames = files.Select(f =>
+                    $"{f.Name} ({f.ModifiedTime?.ToString("dd.MM.yyyy HH:mm") ?? "?"})").ToArray();
+
+                string selectedFileName = await DisplayActionSheet(
+                    "Виберіть файл для завантаження",
+                    "Скасувати",
+                    null,
+                    fileNames);
+
+                if (string.IsNullOrEmpty(selectedFileName) || selectedFileName == "Скасувати")
+                    return;
+
+                int selectedIndex = Array.IndexOf(fileNames, selectedFileName);
+                var selectedFile = files[selectedIndex];
+
+                LoadButton.Text = "Завантаження...";
+                LoadButton.IsEnabled = false;
+
+                var spreadsheetData = await _googleDriveService.LoadSpreadsheetAsync(selectedFile.Id);
+
+                _spreadsheet.Cells.Clear();
+
+                foreach (var kvp in spreadsheetData.Cells)
+                {
+                    var address = CellAddress.FromString(kvp.Key);
+                    _spreadsheet.SetCellExpression(address.Row, address.Column, kvp.Value);
+                }
+
+                while (_spreadsheet.RowCount < spreadsheetData.RowCount)
+                    _spreadsheet.AddRow();
+
+                while (_spreadsheet.ColumnCount < spreadsheetData.ColumnCount)
+                    _spreadsheet.AddColumn();
+
+                BuildGrid();
+
+                LoadButton.IsEnabled = true;
+                LoadButton.Text = "Завантажити";
+
+                await DisplayAlert("Успіх",
+                    $"Таблиця '{selectedFile.Name}' успішно завантажена!",
+                    "ОК");
+            }
+            catch (Exception ex)
+            {
+                LoadButton.IsEnabled = true;
+                LoadButton.Text = "Завантажити";
+                await DisplayAlert("Помилка",
+                    $"Не вдалося завантажити файл: {ex.Message}",
+                    "ОК");
+            }
         }
     }
 }
