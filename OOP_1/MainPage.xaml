@@ -23,7 +23,6 @@
             <Button x:Name="AddRowButton" Text="+ Рядок" Clicked="OnAddRowClicked"/>
             <Button x:Name="AddColButton" Text="+ Стовпчик" Clicked="OnAddColClicked"/>
 
-            <!-- Нові кнопки для Google Drive -->
             <Button x:Name="ConnectButton" 
                     Text="Підключити Google Drive" 
                     Clicked="OnConnectToGoogleDriveClicked"
