@@ -19,6 +19,8 @@ namespace OOP_1.Services
                 };
             }
 
+            SpreadsheetVisitor visitor = null;
+
             try
             {
                 Debug.WriteLine($"[ExpressionService] Обчислення виразу: {expression}");
@@ -65,10 +67,10 @@ namespace OOP_1.Services
                     };
                 }
 
-                var visitor = new SpreadsheetVisitor(dependencyResolver);
+                visitor = new SpreadsheetVisitor(dependencyResolver);
                 object resultValue = visitor.Visit(tree);
 
-                Debug.WriteLine($"[ExpressionService] Результат: {resultValue}, Залежності: {visitor.Dependencies.Count}");
+                Debug.WriteLine($"[ExpressionService] Результат: {resultValue}, Залежності: {visitor.Dependencies.Count}");
 
                 return new CalculationResult
                 {
@@ -84,7 +86,7 @@ namespace OOP_1.Services
                 return new CalculationResult
                 {
                     Value = "#ДІЛ/0!",
-                    Dependencies = new System.Collections.Generic.HashSet<CellAddress>(),
+                    Dependencies = visitor?.Dependencies ?? new HashSet<CellAddress>(),
                     HasError = true,
                     ErrorMessage = "Ділення на нуль"
                 };
@@ -95,7 +97,7 @@ namespace OOP_1.Services
                 return new CalculationResult
                 {
                     Value = "#ПОСИЛАННЯ!",
-                    Dependencies = new System.Collections.Generic.HashSet<CellAddress>(),
+                    Dependencies = visitor?.Dependencies ?? new HashSet<CellAddress>(),
                     HasError = true,
                     ErrorMessage = ex.Message
                 };
@@ -106,7 +108,7 @@ namespace OOP_1.Services
                 return new CalculationResult
                 {
                     Value = "#ЗНАЧЕННЯ!",
-                    Dependencies = new System.Collections.Generic.HashSet<CellAddress>(),
+                    Dependencies = visitor?.Dependencies ?? new HashSet<CellAddress>(),
                     HasError = true,
                     ErrorMessage = "Невірний формат числа"
                 };
@@ -117,7 +119,7 @@ namespace OOP_1.Services
                 return new CalculationResult
                 {
                     Value = "#ЧИСЛО!",
-                    Dependencies = new System.Collections.Generic.HashSet<CellAddress>(),
+                    Dependencies = visitor?.Dependencies ?? new HashSet<CellAddress>(),
                     HasError = true,
                     ErrorMessage = "Число надто велике або надто мале"
                 };
@@ -129,7 +131,7 @@ namespace OOP_1.Services
                 return new CalculationResult
                 {
                     Value = "#ПОМИЛКА!",
-                    Dependencies = new System.Collections.Generic.HashSet<CellAddress>(),
+                    Dependencies = visitor?.Dependencies ?? new HashSet<CellAddress>(),
                     HasError = true,
                     ErrorMessage = ex.Message
                 };

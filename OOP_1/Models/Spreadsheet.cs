@@ -135,34 +135,36 @@ namespace OOP_1.Models
             if (chain.Contains(address))
             {
                 Debug.WriteLine($"[Spreadsheet] Циркулярне посилання виявлено при зверненні до {address}");
-                throw new InvalidCellReferenceException($"Циркулярне посилання на {address}");
+                throw new InvalidCellReferenceException($"Циркулярне посилання на {address}");
             }
 
             if (!IsValidAddress(address))
             {
                 Debug.WriteLine($"[Spreadsheet] Посилання на неіснуючу клітинку: {address}");
                 throw new InvalidCellReferenceException(
-                    $"Клітинка {address} поза межами таблиці (рядків: {RowCount}, стовпців: {ColumnCount})"
+                  $"Клітинка {address} поза межами таблиці (рядків: {RowCount}, стовпців: {ColumnCount})"
                 );
             }
 
             var cell = GetCell(address);
 
-            if (cell.Value is string errorValue && errorValue.StartsWith("#"))
-            {
-                Debug.WriteLine($"[Spreadsheet] Клітинка {address} містить помилку: {errorValue}");
-                throw new InvalidCellReferenceException($"Клітинка {address} містить помилку: {errorValue}");
-            }
-
-            if (string.IsNullOrWhiteSpace(cell.Expression))
+            if (string.IsNullOrWhiteSpace(cell.Expression))
             {
                 Debug.WriteLine($"[Spreadsheet] Клітинка {address} порожня");
                 throw new InvalidCellReferenceException($"Клітинка {address} порожня");
             }
 
+            RecalculateRecursive(address, chain);
+
+            if (cell.Value is string errorValue && errorValue.StartsWith("#"))
+            {
+                Debug.WriteLine($"[Spreadsheet] Клітинка {address} містить помилку: {errorValue}");
+                throw new InvalidCellReferenceException($"Клітинка {address} містить помилку: {errorValue}");
+            }
+
             if (cell.Value is null)
             {
-                Debug.WriteLine($"[Spreadsheet] Клітинка {address} не має значення");
+                Debug.WriteLine($"[Spreadsheet] Клітинка {address} не має значення після перерахунку");
                 throw new InvalidCellReferenceException($"Клітинка {address} не обчислена");
             }
 
